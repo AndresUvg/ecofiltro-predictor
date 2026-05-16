@@ -112,54 +112,58 @@ st.divider()
 if st.button("🔮 Predecir Tasa de Filtracion", type="primary", use_container_width=True):
     clima = obtener_clima(fecha_prod)
 
+    # 1. Crear el diccionario asegurando el mapeo en tiempo real
     datos = {
-        'limite_liquido': limite_liquido,
-        'indice_plastico': indice_plastico,
-        'arcilla': arcilla,
-        'arena': arena,
-        'limo': limo,
-        'barro_humedad': barro_humedad,
-        'barro_peso': barro_peso,
-        'humedad': humedad,
-        'peso': peso,
-        'mayor_2mm': mayor_2mm,
-        'entre_2_y_05mm': entre_2_y_05mm,
-        'menor_05mm': menor_05mm,
-        'fm_humedad': fm_humedad,
-        'fm_peso': fm_peso,
-        'Temperatura_horno': Temperatura_horno,
-        'porcentajeAprobado_horno': porcentajeAprobado,
-        'altos_horno': altos,
-        'bajos_horno': bajos,
-        'rajadosCC_horno': rajados,
-        'Aprobados_horno': aprobados,
-        'temp_tunel_promedio': temp_tunel,
-        'diametro': diametro,
-        'alturaH1': alturaH1,
-        'alturaH2': alturaH2,
-        'grosor1': grosor1,
-        'grosor2': grosor2,
-        'grosorFondo': grosorFondo,
-        'pesouf': pesouf,
-        'barroLB': barroLB,
-        'aserrinLB': aserrinLB,
-        'temperature_2m_max': clima['temperature_2m_max'],
-        'temperature_2m_min': clima['temperature_2m_min'],
-        'precipitation_sum': clima['precipitation_sum'],
-        'windspeed_10m_max': clima['windspeed_10m_max'],
-        'Horno': horno_map[horno],
-        'nombre_turno': turno_map[turno],
-        'grupoProd': grupo_map[grupo]
+        'limite_liquido': float(limite_liquido),
+        'indice_plastico': float(indice_plastico),
+        'arcilla': float(arcilla),
+        'arena': float(arena),
+        'limo': float(limo),
+        'barro_humedad': float(barro_humedad),
+        'barro_peso': float(barro_peso),
+        'humedad': float(humedad),
+        'peso': float(peso),
+        'mayor_2mm': float(mayor_2mm),
+        'entre_2_y_05mm': float(entre_2_y_05mm),
+        'menor_05mm': float(menor_05mm),
+        'fm_humedad': float(fm_humedad),
+        'fm_peso': float(fm_peso),
+        'Temperatura_horno': float(Temperatura_horno),
+        'porcentajeAprobado_horno': float(porcentajeAprobado),
+        'altos_horno': float(altos),
+        'bajos_horno': float(bajos),
+        'rajadosCC_horno': float(rajados),
+        'Aprobados_horno': float(aprobados),
+        'temp_tunel_promedio': float(temp_tunel),
+        'diametro': float(diametro),
+        'alturaH1': float(alturaH1),
+        'alturaH2': float(alturaH2),
+        'grosor1': float(grosor1),
+        'grosor2': float(grosor2),
+        'grosorFondo': float(grosorFondo),
+        'pesouf': float(pesouf),
+        'barroLB': float(barroLB),
+        'aserrinLB': float(aserrinLB),
+        'temperature_2m_max': float(clima['temperature_2m_max']),
+        'temperature_2m_min': float(clima['temperature_2m_min']),
+        'precipitation_sum': float(clima['precipitation_sum']),
+        'windspeed_10m_max': float(clima['windspeed_10m_max']),
+        'Horno': int(horno_map[horno]),
+        'nombre_turno': int(turno_map[turno]),
+        'grupoProd': int(grupo_map[grupo])
     }
 
-    # Creación del dataframe y alineación estricta con las columnas del modelo entrenado
+    # 2. Convertir a DataFrame de una fila
     df_pred = pd.DataFrame([datos])
-    df_pred = df_pred[columnas]
     
-    # Preprocesamiento e Inferencia
+    # 3. Forzar de forma estricta que las columnas tengan el orden exacto del modelo entrenado
+    # Esto evita que el Imputer use sus valores por defecto si los nombres no se alineaban bien
+    df_pred = df_pred.reindex(columns=columnas)
+    
+    # 4. Pasar por el Imputer y realizar la Inferencia en vivo
     df_imp = imputer.transform(df_pred)
     tasa_pred = modelo.predict(df_imp)[0]
-    tasa_pred = max(100, tasa_pred)
+    tasa_pred = max(100, float(tasa_pred))
 
     st.subheader("📊 Resultado de la Prediccion")
     col_r1, col_r2, col_r3 = st.columns(3)
@@ -182,4 +186,4 @@ if st.button("🔮 Predecir Tasa de Filtracion", type="primary", use_container_w
 
     st.markdown("---")
     st.caption("Modelo: XGBoost optimizado | R²=0.40 | RMSE=331 ml/h | "
-               "Datos: Oct 2025 - May 2026 | Ciudad Vieja, Sacatepequez")
+               "Datos: Oct 2025 - May 2026 | Ciudad Vieja, Sacatepequez")26 | Ciudad Vieja, Sacatepequez")
