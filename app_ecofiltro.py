@@ -1,4 +1,3 @@
-
 import streamlit as st
 import joblib
 import numpy as np
@@ -14,9 +13,17 @@ st.set_page_config(page_title="Predictor Ecofiltro", page_icon="💧", layout="w
 def cargar_modelo():
     modelo = joblib.load("modelo_ecofiltro.pkl")
     imputer = joblib.load("imputer_ecofiltro.pkl")
-    columnas = joblib.load("columnas_ecofiltro.pkl")
-    return modelo, imputer, columnas
+    columnas_raw = joblib.load("columnas_ecofiltro.pkl")
+    
+    # Asegurar que las columnas sean una lista limpia de Python para evitar fallas de indexación
+    if hasattr(columnas_raw, "tolist"):
+        columnas_limpias = columnas_raw.tolist()
+    else:
+        columnas_limpias = list(columnas_raw)
+        
+    return modelo, imputer, columnas_limpias
 
+# Inicialización explícita de variables globales
 modelo, imputer, columnas = cargar_modelo()
 
 # Obtener clima
@@ -145,7 +152,11 @@ if st.button("🔮 Predecir Tasa de Filtracion", type="primary", use_container_w
         'grupoProd': grupo_map[grupo]
     }
 
-    df_pred = pd.DataFrame([datos])[columnas]
+    # Creación del dataframe y alineación estricta con las columnas del modelo entrenado
+    df_pred = pd.DataFrame([datos])
+    df_pred = df_pred[columnas]
+    
+    # Preprocesamiento e Inferencia
     df_imp = imputer.transform(df_pred)
     tasa_pred = modelo.predict(df_imp)[0]
     tasa_pred = max(100, tasa_pred)
