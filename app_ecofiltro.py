@@ -5,28 +5,18 @@ import pandas as pd
 import requests
 from datetime import date
 
-# Configuracion
 st.set_page_config(page_title="Predictor Ecofiltro", page_icon="💧", layout="wide")
 
-# Cargar modelo
 @st.cache_resource
 def cargar_modelo():
     modelo = joblib.load("modelo_ecofiltro.pkl")
     imputer = joblib.load("imputer_ecofiltro.pkl")
     columnas_raw = joblib.load("columnas_ecofiltro.pkl")
-    
-    # Asegurar que las columnas sean una lista limpia de Python para evitar fallas de indexación
-    if hasattr(columnas_raw, "tolist"):
-        columnas_limpias = columnas_raw.tolist()
-    else:
-        columnas_limpias = list(columnas_raw)
-        
-    return modelo, imputer, columnas_limpias
+    columnas = columnas_raw.tolist() if hasattr(columnas_raw, "tolist") else list(columnas_raw)
+    return modelo, imputer, columnas
 
-# Inicialización explícita de variables globales
 modelo, imputer, columnas = cargar_modelo()
 
-# Obtener clima
 def obtener_clima(fecha):
     try:
         url = "https://archive-api.open-meteo.com/v1/archive"
@@ -48,7 +38,6 @@ def obtener_clima(fecha):
         return {"temperature_2m_max": 22.0, "temperature_2m_min": 14.0,
                 "precipitation_sum": 0.0, "windspeed_10m_max": 7.0}
 
-# TITULO
 st.title("💧 Predictor de Tasa de Filtracion — Ecofiltro")
 st.markdown("Ingrese los datos del lote para predecir la tasa de filtracion esperada.")
 st.divider()
@@ -57,25 +46,25 @@ col1, col2, col3 = st.columns(3)
 
 with col1:
     st.subheader("🪨 Composicion del Barro")
-    limite_liquido = st.number_input("Limite liquido (%)", 40.0, 60.0, 49.5, 0.1)
-    indice_plastico = st.number_input("Indice de plasticidad", 10.0, 25.0, 15.0, 0.1)
-    arcilla = st.number_input("Arcilla (%)", 20.0, 50.0, 37.0, 0.1)
-    arena = st.number_input("Arena (%)", 10.0, 30.0, 18.0, 0.1)
-    limo = st.number_input("Limo (%)", 30.0, 60.0, 45.0, 0.1)
-    barro_humedad = st.number_input("Humedad del barro (%)", 0.0, 15.0, 6.0, 0.1)
-    barro_peso = st.number_input("Peso del barro (lb)", 40.0, 100.0, 60.0, 0.5)
+    limite_liquido = st.number_input("Limite liquido (%)", 42.0, 54.0, 50.4, 0.1)
+    indice_plastico = st.number_input("Indice de plasticidad", 14.0, 20.0, 16.5, 0.1)
+    arcilla = st.number_input("Arcilla (%)", 29.0, 42.0, 36.9, 0.1)
+    arena = st.number_input("Arena (%)", 14.0, 23.0, 18.6, 0.1)
+    limo = st.number_input("Limo (%)", 41.0, 51.0, 44.7, 0.1)
+    barro_humedad = st.number_input("Humedad del barro (%)", 4.0, 6.0, 4.9, 0.1)
+    barro_peso = st.number_input("Peso del barro (lb)", 60.0, 75.0, 75.0, 0.5)
 
 with col2:
     st.subheader("🪵 Aserrin y Mezcla")
-    humedad = st.number_input("Humedad aserrin (%)", 0.0, 20.0, 5.0, 0.5)
-    peso = st.number_input("Peso aserrin (lb)", 5.0, 30.0, 11.25, 0.25)
-    mayor_2mm = st.number_input("Granulometria >2mm (%)", 0.0, 10.0, 0.05, 0.01)
-    entre_2_y_05mm = st.number_input("Granulometria 0.5-2mm (%)", 60.0, 90.0, 77.0, 0.5)
-    menor_05mm = st.number_input("Granulometria <0.5mm (%)", 10.0, 40.0, 23.0, 0.5)
-    fm_humedad = st.number_input("Humedad formulacion (%)", 0.0, 20.0, 5.0, 0.5)
-    fm_peso = st.number_input("Peso formulacion (lb)", 5.0, 30.0, 11.25, 0.25)
-    aserrinLB = st.number_input("Libras de aserrin", 5.0, 30.0, 11.25, 0.25)
-    barroLB = st.number_input("Libras de barro", 40.0, 100.0, 60.0, 0.5)
+    humedad = st.number_input("Humedad aserrin (%)", 4.0, 5.0, 5.0, 0.1)
+    peso = st.number_input("Peso aserrin (lb)", 10.0, 29.0, 26.0, 0.5)
+    mayor_2mm = st.number_input("Granulometria >2mm (%)", 0.0, 1.0, 0.0, 0.01)
+    entre_2_y_05mm = st.number_input("Granulometria 0.5-2mm (%)", 70.0, 77.0, 74.5, 0.1)
+    menor_05mm = st.number_input("Granulometria <0.5mm (%)", 23.0, 30.0, 25.4, 0.1)
+    fm_humedad = st.number_input("Humedad formulacion (%)", 4.0, 5.0, 5.0, 0.1)
+    fm_peso = st.number_input("Peso formulacion (lb)", 10.0, 29.0, 26.0, 0.5)
+    aserrinLB = st.number_input("Libras de aserrin", 10.0, 29.0, 26.0, 0.5)
+    barroLB = st.number_input("Libras de barro", 60.0, 75.0, 75.0, 0.5)
 
 with col3:
     st.subheader("🔥 Proceso")
@@ -87,22 +76,22 @@ with col3:
     grupo_map = {"Grupo 1":0,"Grupo 2":1}
 
     st.subheader("📊 Resultado del Horneado")
-    Temperatura_horno = st.number_input("Temperatura horneado (C)", 600.0, 900.0, 720.0, 1.0)
-    porcentajeAprobado = st.number_input("% Aprobados en horno", 0.0, 100.0, 75.0, 0.5)
-    altos = st.number_input("Filtros altos en horno", 0, 50, 10, 1)
-    bajos = st.number_input("Filtros bajos en horno", 0, 50, 15, 1)
-    rajados = st.number_input("Filtros rajados en horno", 0, 50, 2, 1)
-    aprobados = st.number_input("Filtros aprobados en horno", 0, 500, 150, 1)
-    temp_tunel = st.number_input("Temperatura promedio tunel (C)", 20.0, 150.0, 75.0, 1.0)
+    Temperatura_horno = st.number_input("Temperatura horneado (C)", 23.0, 830.0, 733.0, 1.0)
+    porcentajeAprobado = st.number_input("% Aprobados en horno", 0.0, 100.0, 75.6, 0.5)
+    altos = st.number_input("Filtros altos en horno", 0, 151, 3, 1)
+    bajos = st.number_input("Filtros bajos en horno", 0, 219, 15, 1)
+    rajados = st.number_input("Filtros rajados en horno", 0, 44, 8, 1)
+    aprobados = st.number_input("Filtros aprobados en horno", 0, 274, 135, 1)
+    temp_tunel = st.number_input("Temperatura promedio tunel (C)", 20.0, 95.0, 82.0, 1.0)
 
     st.subheader("📐 Dimensiones del Crudo")
-    diametro = st.number_input("Diametro (cm)", 30.0, 36.0, 32.9, 0.1)
-    alturaH1 = st.number_input("Altura H1 (cm)", 24.0, 28.0, 26.3, 0.1)
-    alturaH2 = st.number_input("Altura H2 (cm)", 24.0, 28.0, 26.3, 0.1)
-    grosor1 = st.number_input("Grosor 1 (mm)", 15.0, 25.0, 18.5, 0.1)
-    grosor2 = st.number_input("Grosor 2 (mm)", 15.0, 25.0, 18.5, 0.1)
-    grosorFondo = st.number_input("Grosor fondo (mm)", 14.0, 22.0, 16.2, 0.1)
-    pesouf = st.number_input("Peso UF (lb)", 14.0, 20.0, 16.5, 0.1)
+    diametro = st.number_input("Diametro (cm)", 32.7, 33.0, 32.9, 0.1)
+    alturaH1 = st.number_input("Altura H1 (cm)", 26.0, 26.5, 26.3, 0.1)
+    alturaH2 = st.number_input("Altura H2 (cm)", 26.0, 26.6, 26.3, 0.1)
+    grosor1 = st.number_input("Grosor 1 (mm)", 17.9, 19.9, 18.9, 0.1)
+    grosor2 = st.number_input("Grosor 2 (mm)", 17.7, 19.8, 18.8, 0.1)
+    grosorFondo = st.number_input("Grosor fondo (mm)", 15.4, 20.8, 19.1, 0.1)
+    pesouf = st.number_input("Peso UF (lb)", 16.2, 17.9, 16.7, 0.1)
 
     st.subheader("📅 Fecha de produccion")
     fecha_prod = st.date_input("Fecha", value=date.today())
@@ -112,7 +101,6 @@ st.divider()
 if st.button("🔮 Predecir Tasa de Filtracion", type="primary", use_container_width=True):
     clima = obtener_clima(fecha_prod)
 
-    # 1. Crear el diccionario asegurando el mapeo en tiempo real
     datos = {
         'limite_liquido': float(limite_liquido),
         'indice_plastico': float(indice_plastico),
@@ -153,17 +141,9 @@ if st.button("🔮 Predecir Tasa de Filtracion", type="primary", use_container_w
         'grupoProd': int(grupo_map[grupo])
     }
 
-    # 2. Convertir a DataFrame de una fila
-    df_pred = pd.DataFrame([datos])
-    
-    # 3. Forzar de forma estricta que las columnas tengan el orden exacto del modelo entrenado
-    # Esto evita que el Imputer use sus valores por defecto si los nombres no se alineaban bien
-    df_pred = df_pred.reindex(columns=columnas)
-    
-    # 4. Pasar por el Imputer y realizar la Inferencia en vivo
+    df_pred = pd.DataFrame([datos]).reindex(columns=columnas)
     df_imp = imputer.transform(df_pred)
-    tasa_pred = modelo.predict(df_imp)[0]
-    tasa_pred = max(100, float(tasa_pred))
+    tasa_pred = max(100, float(modelo.predict(df_imp)[0]))
 
     st.subheader("📊 Resultado de la Prediccion")
     col_r1, col_r2, col_r3 = st.columns(3)
@@ -180,10 +160,10 @@ if st.button("🔮 Predecir Tasa de Filtracion", type="primary", use_container_w
             st.warning(f"⚠️ ALTO — {tasa_pred-1600:.0f} ml/h por encima del maximo")
 
     with col_r3:
-        st.info(f"🌤️ Clima: {clima['temperature_2m_max']:.1f}°C max | "
+        st.info(f"🌤️ Clima: {clima['temperature_2m_max']:.1f}C max | "
                 f"Lluvia: {clima['precipitation_sum']:.1f}mm | "
                 f"Viento: {clima['windspeed_10m_max']:.1f} km/h")
 
     st.markdown("---")
-    st.caption("Modelo: XGBoost optimizado | R²=0.40 | RMSE=331 ml/h | "
+    st.caption("Modelo: XGBoost optimizado | R2=0.40 | RMSE=331 ml/h | "
                "Datos: Oct 2025 - May 2026 | Ciudad Vieja, Sacatepequez")
