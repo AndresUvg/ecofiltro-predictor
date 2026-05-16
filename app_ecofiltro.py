@@ -184,6 +184,6 @@ if st.button("🔮 Predecir Tasa de Filtracion", type="primary", use_container_w
                 f"Lluvia: {clima['precipitation_sum']:.1f}mm | "
                 f"Viento: {clima['windspeed_10m_max']:.1f} km/h")
 
-    st.markdown("---")
+   st.markdown("---")
     st.caption("Modelo: XGBoost optimizado | R²=0.40 | RMSE=331 ml/h | "
-               "Datos: Oct 2025 - May 2026 | Ciudad Vieja, Sacatepequez")26 | Ciudad Vieja, Sacatepequez")
+               "Datos: Oct 2025 - May 2026 | Ciudad Vieja, Sacatepequez")
