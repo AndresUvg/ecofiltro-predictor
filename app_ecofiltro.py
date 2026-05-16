@@ -1,0 +1,174 @@
+
+import streamlit as st
+import joblib
+import numpy as np
+import pandas as pd
+import requests
+from datetime import date
+
+# Configuracion
+st.set_page_config(page_title="Predictor Ecofiltro", page_icon="💧", layout="wide")
+
+# Cargar modelo
+@st.cache_resource
+def cargar_modelo():
+    modelo = joblib.load("modelo_ecofiltro.pkl")
+    imputer = joblib.load("imputer_ecofiltro.pkl")
+    columnas = joblib.load("columnas_ecofiltro.pkl")
+    return modelo, imputer, columnas
+
+modelo, imputer, columnas = cargar_modelo()
+
+# Obtener clima
+def obtener_clima(fecha):
+    try:
+        url = "https://archive-api.open-meteo.com/v1/archive"
+        params = {
+            "latitude": 14.5197, "longitude": -90.7589,
+            "start_date": str(fecha), "end_date": str(fecha),
+            "daily": ["temperature_2m_max","temperature_2m_min",
+                      "precipitation_sum","windspeed_10m_max"],
+            "timezone": "America/Guatemala"
+        }
+        r = requests.get(url, params=params).json()
+        return {
+            "temperature_2m_max": r["daily"]["temperature_2m_max"][0] or 22.0,
+            "temperature_2m_min": r["daily"]["temperature_2m_min"][0] or 14.0,
+            "precipitation_sum": r["daily"]["precipitation_sum"][0] or 0.0,
+            "windspeed_10m_max": r["daily"]["windspeed_10m_max"][0] or 7.0
+        }
+    except:
+        return {"temperature_2m_max": 22.0, "temperature_2m_min": 14.0,
+                "precipitation_sum": 0.0, "windspeed_10m_max": 7.0}
+
+# TITULO
+st.title("💧 Predictor de Tasa de Filtracion — Ecofiltro")
+st.markdown("Ingrese los datos del lote para predecir la tasa de filtracion esperada.")
+st.divider()
+
+col1, col2, col3 = st.columns(3)
+
+with col1:
+    st.subheader("🪨 Composicion del Barro")
+    limite_liquido = st.number_input("Limite liquido (%)", 40.0, 60.0, 49.5, 0.1)
+    indice_plastico = st.number_input("Indice de plasticidad", 10.0, 25.0, 15.0, 0.1)
+    arcilla = st.number_input("Arcilla (%)", 20.0, 50.0, 37.0, 0.1)
+    arena = st.number_input("Arena (%)", 10.0, 30.0, 18.0, 0.1)
+    limo = st.number_input("Limo (%)", 30.0, 60.0, 45.0, 0.1)
+    barro_humedad = st.number_input("Humedad del barro (%)", 0.0, 15.0, 6.0, 0.1)
+    barro_peso = st.number_input("Peso del barro (lb)", 40.0, 100.0, 60.0, 0.5)
+
+with col2:
+    st.subheader("🪵 Aserrin y Mezcla")
+    humedad = st.number_input("Humedad aserrin (%)", 0.0, 20.0, 5.0, 0.5)
+    peso = st.number_input("Peso aserrin (lb)", 5.0, 30.0, 11.25, 0.25)
+    mayor_2mm = st.number_input("Granulometria >2mm (%)", 0.0, 10.0, 0.05, 0.01)
+    entre_2_y_05mm = st.number_input("Granulometria 0.5-2mm (%)", 60.0, 90.0, 77.0, 0.5)
+    menor_05mm = st.number_input("Granulometria <0.5mm (%)", 10.0, 40.0, 23.0, 0.5)
+    fm_humedad = st.number_input("Humedad formulacion (%)", 0.0, 20.0, 5.0, 0.5)
+    fm_peso = st.number_input("Peso formulacion (lb)", 5.0, 30.0, 11.25, 0.25)
+    aserrinLB = st.number_input("Libras de aserrin", 5.0, 30.0, 11.25, 0.25)
+    barroLB = st.number_input("Libras de barro", 40.0, 100.0, 60.0, 0.5)
+
+with col3:
+    st.subheader("🔥 Proceso")
+    horno = st.selectbox("Horno", ["Horno 1","Horno 2","Horno 3","Horno 4","Horno 5"])
+    horno_map = {"Horno 1":0,"Horno 2":1,"Horno 3":2,"Horno 4":3,"Horno 5":4}
+    turno = st.selectbox("Turno", ["Dia","Noche"])
+    turno_map = {"Dia":0,"Noche":1}
+    grupo = st.selectbox("Grupo de produccion", ["Grupo 1","Grupo 2"])
+    grupo_map = {"Grupo 1":0,"Grupo 2":1}
+
+    st.subheader("📊 Resultado del Horneado")
+    Temperatura_horno = st.number_input("Temperatura horneado (C)", 600.0, 900.0, 720.0, 1.0)
+    porcentajeAprobado = st.number_input("% Aprobados en horno", 0.0, 100.0, 75.0, 0.5)
+    altos = st.number_input("Filtros altos en horno", 0, 50, 10, 1)
+    bajos = st.number_input("Filtros bajos en horno", 0, 50, 15, 1)
+    rajados = st.number_input("Filtros rajados en horno", 0, 50, 2, 1)
+    aprobados = st.number_input("Filtros aprobados en horno", 0, 500, 150, 1)
+    temp_tunel = st.number_input("Temperatura promedio tunel (C)", 20.0, 150.0, 75.0, 1.0)
+
+    st.subheader("📐 Dimensiones del Crudo")
+    diametro = st.number_input("Diametro (cm)", 30.0, 36.0, 32.9, 0.1)
+    alturaH1 = st.number_input("Altura H1 (cm)", 24.0, 28.0, 26.3, 0.1)
+    alturaH2 = st.number_input("Altura H2 (cm)", 24.0, 28.0, 26.3, 0.1)
+    grosor1 = st.number_input("Grosor 1 (mm)", 15.0, 25.0, 18.5, 0.1)
+    grosor2 = st.number_input("Grosor 2 (mm)", 15.0, 25.0, 18.5, 0.1)
+    grosorFondo = st.number_input("Grosor fondo (mm)", 14.0, 22.0, 16.2, 0.1)
+    pesouf = st.number_input("Peso UF (lb)", 14.0, 20.0, 16.5, 0.1)
+
+    st.subheader("📅 Fecha de produccion")
+    fecha_prod = st.date_input("Fecha", value=date.today())
+
+st.divider()
+
+if st.button("🔮 Predecir Tasa de Filtracion", type="primary", use_container_width=True):
+    clima = obtener_clima(fecha_prod)
+
+    datos = {
+        'limite_liquido': limite_liquido,
+        'indice_plastico': indice_plastico,
+        'arcilla': arcilla,
+        'arena': arena,
+        'limo': limo,
+        'barro_humedad': barro_humedad,
+        'barro_peso': barro_peso,
+        'humedad': humedad,
+        'peso': peso,
+        'mayor_2mm': mayor_2mm,
+        'entre_2_y_05mm': entre_2_y_05mm,
+        'menor_05mm': menor_05mm,
+        'fm_humedad': fm_humedad,
+        'fm_peso': fm_peso,
+        'Temperatura_horno': Temperatura_horno,
+        'porcentajeAprobado_horno': porcentajeAprobado,
+        'altos_horno': altos,
+        'bajos_horno': bajos,
+        'rajadosCC_horno': rajados,
+        'Aprobados_horno': aprobados,
+        'temp_tunel_promedio': temp_tunel,
+        'diametro': diametro,
+        'alturaH1': alturaH1,
+        'alturaH2': alturaH2,
+        'grosor1': grosor1,
+        'grosor2': grosor2,
+        'grosorFondo': grosorFondo,
+        'pesouf': pesouf,
+        'barroLB': barroLB,
+        'aserrinLB': aserrinLB,
+        'temperature_2m_max': clima['temperature_2m_max'],
+        'temperature_2m_min': clima['temperature_2m_min'],
+        'precipitation_sum': clima['precipitation_sum'],
+        'windspeed_10m_max': clima['windspeed_10m_max'],
+        'Horno': horno_map[horno],
+        'nombre_turno': turno_map[turno],
+        'grupoProd': grupo_map[grupo]
+    }
+
+    df_pred = pd.DataFrame([datos])[columnas]
+    df_imp = imputer.transform(df_pred)
+    tasa_pred = modelo.predict(df_imp)[0]
+    tasa_pred = max(100, tasa_pred)
+
+    st.subheader("📊 Resultado de la Prediccion")
+    col_r1, col_r2, col_r3 = st.columns(3)
+
+    with col_r1:
+        st.metric("Tasa predicha", f"{tasa_pred:.0f} ml/hora")
+
+    with col_r2:
+        if 800 <= tasa_pred <= 1600:
+            st.success("✅ RANGO ACEPTABLE (800-1,600 ml/h)")
+        elif tasa_pred < 800:
+            st.error(f"⚠️ BAJO — {800-tasa_pred:.0f} ml/h por debajo del minimo")
+        else:
+            st.warning(f"⚠️ ALTO — {tasa_pred-1600:.0f} ml/h por encima del maximo")
+
+    with col_r3:
+        st.info(f"🌤️ Clima: {clima['temperature_2m_max']:.1f}°C max | "
+                f"Lluvia: {clima['precipitation_sum']:.1f}mm | "
+                f"Viento: {clima['windspeed_10m_max']:.1f} km/h")
+
+    st.markdown("---")
+    st.caption("Modelo: XGBoost optimizado | R²=0.40 | RMSE=331 ml/h | "
+               "Datos: Oct 2025 - May 2026 | Ciudad Vieja, Sacatepequez")
