@@ -12,12 +12,15 @@ st.set_page_config(page_title="Predictor Ecofiltro", page_icon="💧", layout="w
 # Cargar modelo
 @st.cache_resource
 def cargar_modelo():
-    modelo = joblib.load("modelo_ecofiltro.pkl")
-    imputer = joblib.load("imputer_ecofiltro.pkl")
-    columnas = joblib.load("columnas_ecofiltro.pkl")
-    return modelo, imputer, columnas
-
-modelo, imputer, columnas = cargar_modelo()
+    try:
+        modelo = joblib.load("modelo_ecofiltro.pkl")
+        imputer = joblib.load("imputer_ecofiltro.pkl")
+        columnas = joblib.load("columnas_ecofiltro.pkl")
+        return modelo, imputer, columnas
+    except Exception as e:
+        # Esto imprimirá el error real (por ejemplo: "ModuleNotFoundError: No module named 'xgboost'")
+        st.error(f"Falta una librería requerida por el archivo PKL: {e}")
+        st.stop()
 
 # Obtener clima
 def obtener_clima(fecha):
