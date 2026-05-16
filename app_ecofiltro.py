@@ -10,12 +10,24 @@ st.set_page_config(page_title="Predictor Ecofiltro", page_icon="💧", layout="w
 @st.cache_resource
 def cargar_modelo():
     modelo = joblib.load("modelo_ecofiltro.pkl")
-    imputer = joblib.load("imputer_ecofiltro.pkl")
     columnas_raw = joblib.load("columnas_ecofiltro.pkl")
     columnas = columnas_raw.tolist() if hasattr(columnas_raw, "tolist") else list(columnas_raw)
-    return modelo, imputer, columnas
+    return modelo, columnas
 
-modelo, imputer, columnas = cargar_modelo()
+modelo, columnas = cargar_modelo()
+
+MEDIANAS = {'limite_liquido': 50.35, 'indice_plastico': 16.52, 'arcilla': 36.89,
+            'arena': 18.62, 'limo': 44.73, 'barro_humedad': 4.88, 'barro_peso': 75.0,
+            'humedad': 5.0, 'peso': 26.0, 'mayor_2mm': 0.02, 'entre_2_y_05mm': 74.54,
+            'menor_05mm': 25.44, 'fm_humedad': 5.0, 'fm_peso': 26.0,
+            'Temperatura_horno': 733.0, 'porcentajeAprobado_horno': 75.61,
+            'altos_horno': 3.0, 'bajos_horno': 15.0, 'rajadosCC_horno': 8.0,
+            'Aprobados_horno': 135.0, 'temp_tunel_promedio': 82.0,
+            'diametro': 32.92, 'alturaH1': 26.28, 'alturaH2': 26.32,
+            'grosor1': 18.93, 'grosor2': 18.84, 'grosorFondo': 19.06,
+            'pesouf': 16.74, 'barroLB': 75.0, 'aserrinLB': 26.0,
+            'temperature_2m_max': 23.12, 'temperature_2m_min': 12.51,
+            'precipitation_sum': 1.75, 'windspeed_10m_max': 11.59}
 
 def obtener_clima(fecha):
     try:
@@ -29,14 +41,14 @@ def obtener_clima(fecha):
         }
         r = requests.get(url, params=params).json()
         return {
-            "temperature_2m_max": r["daily"]["temperature_2m_max"][0] or 22.0,
-            "temperature_2m_min": r["daily"]["temperature_2m_min"][0] or 14.0,
-            "precipitation_sum": r["daily"]["precipitation_sum"][0] or 0.0,
-            "windspeed_10m_max": r["daily"]["windspeed_10m_max"][0] or 7.0
+            "temperature_2m_max": r["daily"]["temperature_2m_max"][0] or 23.12,
+            "temperature_2m_min": r["daily"]["temperature_2m_min"][0] or 12.51,
+            "precipitation_sum": r["daily"]["precipitation_sum"][0] or 1.75,
+            "windspeed_10m_max": r["daily"]["windspeed_10m_max"][0] or 11.59
         }
     except:
-        return {"temperature_2m_max": 22.0, "temperature_2m_min": 14.0,
-                "precipitation_sum": 0.0, "windspeed_10m_max": 7.0}
+        return {"temperature_2m_max": 23.12, "temperature_2m_min": 12.51,
+                "precipitation_sum": 1.75, "windspeed_10m_max": 11.59}
 
 st.title("💧 Predictor de Tasa de Filtracion — Ecofiltro")
 st.markdown("Ingrese los datos del lote para predecir la tasa de filtracion esperada.")
@@ -46,21 +58,21 @@ col1, col2, col3 = st.columns(3)
 
 with col1:
     st.subheader("🪨 Composicion del Barro")
-    limite_liquido = st.number_input("Limite liquido (%)", 42.0, 54.0, 50.4, 0.1)
-    indice_plastico = st.number_input("Indice de plasticidad", 14.0, 20.0, 16.5, 0.1)
-    arcilla = st.number_input("Arcilla (%)", 29.0, 42.0, 36.9, 0.1)
-    arena = st.number_input("Arena (%)", 14.0, 23.0, 18.6, 0.1)
-    limo = st.number_input("Limo (%)", 41.0, 51.0, 44.7, 0.1)
-    barro_humedad = st.number_input("Humedad del barro (%)", 4.0, 6.0, 4.9, 0.1)
+    limite_liquido = st.number_input("Limite liquido (%)", 42.0, 54.0, 50.35, 0.1)
+    indice_plastico = st.number_input("Indice de plasticidad", 14.0, 20.0, 16.52, 0.1)
+    arcilla = st.number_input("Arcilla (%)", 29.0, 42.0, 36.89, 0.1)
+    arena = st.number_input("Arena (%)", 14.0, 23.0, 18.62, 0.1)
+    limo = st.number_input("Limo (%)", 41.0, 51.0, 44.73, 0.1)
+    barro_humedad = st.number_input("Humedad del barro (%)", 4.0, 6.0, 4.88, 0.1)
     barro_peso = st.number_input("Peso del barro (lb)", 60.0, 75.0, 75.0, 0.5)
 
 with col2:
     st.subheader("🪵 Aserrin y Mezcla")
     humedad = st.number_input("Humedad aserrin (%)", 4.0, 5.0, 5.0, 0.1)
     peso = st.number_input("Peso aserrin (lb)", 10.0, 29.0, 26.0, 0.5)
-    mayor_2mm = st.number_input("Granulometria >2mm (%)", 0.0, 1.0, 0.0, 0.01)
-    entre_2_y_05mm = st.number_input("Granulometria 0.5-2mm (%)", 70.0, 77.0, 74.5, 0.1)
-    menor_05mm = st.number_input("Granulometria <0.5mm (%)", 23.0, 30.0, 25.4, 0.1)
+    mayor_2mm = st.number_input("Granulometria >2mm (%)", 0.0, 1.0, 0.02, 0.01)
+    entre_2_y_05mm = st.number_input("Granulometria 0.5-2mm (%)", 70.0, 77.0, 74.54, 0.1)
+    menor_05mm = st.number_input("Granulometria <0.5mm (%)", 23.0, 30.0, 25.44, 0.1)
     fm_humedad = st.number_input("Humedad formulacion (%)", 4.0, 5.0, 5.0, 0.1)
     fm_peso = st.number_input("Peso formulacion (lb)", 10.0, 29.0, 26.0, 0.5)
     aserrinLB = st.number_input("Libras de aserrin", 10.0, 29.0, 26.0, 0.5)
@@ -77,7 +89,7 @@ with col3:
 
     st.subheader("📊 Resultado del Horneado")
     Temperatura_horno = st.number_input("Temperatura horneado (C)", 23.0, 830.0, 733.0, 1.0)
-    porcentajeAprobado = st.number_input("% Aprobados en horno", 0.0, 100.0, 75.6, 0.5)
+    porcentajeAprobado = st.number_input("% Aprobados en horno", 0.0, 100.0, 75.61, 0.5)
     altos = st.number_input("Filtros altos en horno", 0, 151, 3, 1)
     bajos = st.number_input("Filtros bajos en horno", 0, 219, 15, 1)
     rajados = st.number_input("Filtros rajados en horno", 0, 44, 8, 1)
@@ -85,13 +97,13 @@ with col3:
     temp_tunel = st.number_input("Temperatura promedio tunel (C)", 20.0, 95.0, 82.0, 1.0)
 
     st.subheader("📐 Dimensiones del Crudo")
-    diametro = st.number_input("Diametro (cm)", 32.7, 33.0, 32.9, 0.1)
-    alturaH1 = st.number_input("Altura H1 (cm)", 26.0, 26.5, 26.3, 0.1)
-    alturaH2 = st.number_input("Altura H2 (cm)", 26.0, 26.6, 26.3, 0.1)
-    grosor1 = st.number_input("Grosor 1 (mm)", 17.9, 19.9, 18.9, 0.1)
-    grosor2 = st.number_input("Grosor 2 (mm)", 17.7, 19.8, 18.8, 0.1)
-    grosorFondo = st.number_input("Grosor fondo (mm)", 15.4, 20.8, 19.1, 0.1)
-    pesouf = st.number_input("Peso UF (lb)", 16.2, 17.9, 16.7, 0.1)
+    diametro = st.number_input("Diametro (cm)", 32.7, 33.0, 32.92, 0.01)
+    alturaH1 = st.number_input("Altura H1 (cm)", 26.0, 26.5, 26.28, 0.01)
+    alturaH2 = st.number_input("Altura H2 (cm)", 26.0, 26.6, 26.32, 0.01)
+    grosor1 = st.number_input("Grosor 1 (mm)", 17.9, 19.9, 18.93, 0.01)
+    grosor2 = st.number_input("Grosor 2 (mm)", 17.7, 19.8, 18.84, 0.01)
+    grosorFondo = st.number_input("Grosor fondo (mm)", 15.4, 20.8, 19.06, 0.01)
+    pesouf = st.number_input("Peso UF (lb)", 16.2, 17.9, 16.74, 0.01)
 
     st.subheader("📅 Fecha de produccion")
     fecha_prod = st.date_input("Fecha", value=date.today())
@@ -142,8 +154,13 @@ if st.button("🔮 Predecir Tasa de Filtracion", type="primary", use_container_w
     }
 
     df_pred = pd.DataFrame([datos]).reindex(columns=columnas)
-    df_imp = imputer.transform(df_pred)
-    tasa_pred = max(100, float(modelo.predict(df_imp)[0]))
+    
+    # Imputar nulos con medianas hardcodeadas
+    for col in df_pred.columns:
+        if df_pred[col].isna().any() and col in MEDIANAS:
+            df_pred[col] = df_pred[col].fillna(MEDIANAS[col])
+
+    tasa_pred = max(100, float(modelo.predict(df_pred)[0]))
 
     st.subheader("📊 Resultado de la Prediccion")
     col_r1, col_r2, col_r3 = st.columns(3)
